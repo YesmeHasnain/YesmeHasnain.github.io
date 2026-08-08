@@ -486,20 +486,26 @@ $(document).ready(function() {
         $btn.prop("disabled", true).html("Sending...");
         submitMSG(true, "Sending your message...");
 
+        // Sent as FormData on purpose. A JSON content type is not
+        // CORS-safelisted, so the browser fires an OPTIONS preflight first,
+        // and the Web3Forms preflight answers 403 — which surfaces as an
+        // opaque "Failed to fetch". FormData skips the preflight entirely.
+        var payload = new FormData();
+        payload.append("access_key", WEB3FORMS_ACCESS_KEY);
+        payload.append("subject", "New message from your portfolio — " + name);
+        payload.append("from_name", "Portfolio contact form");
+        payload.append("name", name);
+        payload.append("email", email);
+        payload.append("message", message);
+        payload.append("botcheck", $("#botcheck").is(":checked"));
+
         $.ajax({
             type: "POST",
             url: "https://api.web3forms.com/submit",
-            contentType: "application/json",
+            data: payload,
+            processData: false,
+            contentType: false,
             dataType: "json",
-            data: JSON.stringify({
-                access_key: WEB3FORMS_ACCESS_KEY,
-                subject: "New message from your portfolio — " + name,
-                from_name: "Portfolio contact form",
-                name: name,
-                email: email,
-                message: message,
-                botcheck: $("#botcheck").is(":checked")
-            }),
             success: function (res) {
                 if (res && res.success) {
                     formSuccess();
