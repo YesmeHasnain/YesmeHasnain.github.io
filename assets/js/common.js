@@ -446,7 +446,18 @@ $(document).ready(function() {
 
     /*-----------------------------------------------------------------
       Contacts form
+
+      Sends through Web3Forms, which relays the message to the inbox tied
+      to the access key below. A static site cannot send mail on its own,
+      so the key is what routes submissions to hasnainjustdigital@gmail.com.
+
+      Get a key (free, no signup) at https://web3forms.com — enter the
+      Gmail address and the key arrives by email. Paste it below.
+      Web3Forms keys are designed to live in client-side code, so it is
+      safe to commit this one to a public repository.
     -------------------------------------------------------------------*/
+
+    var WEB3FORMS_ACCESS_KEY = "PASTE-YOUR-ACCESS-KEY-HERE";
 
     $("#contact-form").validator().on("submit", function (event) {
         if (event.isDefaultPrevented()) {
@@ -459,23 +470,54 @@ $(document).ready(function() {
     });
 
     function submitForm(){
-        var name = $("#nameContact").val(),
-            email = $("#emailContact").val(),
+        var $form  = $("#contact-form"),
+            $btn   = $form.find("button[type='submit']"),
+            btnTxt = $btn.html(),
+            name   = $("#nameContact").val(),
+            email  = $("#emailContact").val(),
             message = $("#messageContact").val();
-			
-        var url = "assets/php/form-contact.php";
-		
+
+        if (WEB3FORMS_ACCESS_KEY.indexOf("PASTE-YOUR") === 0) {
+            formError();
+            submitMSG(false, "Form is not configured yet — missing access key.");
+            return;
+        }
+
+        $btn.prop("disabled", true).html("Sending...");
+        submitMSG(true, "Sending your message...");
+
         $.ajax({
             type: "POST",
-            url: url,
-            data: "name=" + name + "&email=" + email + "&message=" + message,
-            success : function(text){
-                if (text == "success"){
+            url: "https://api.web3forms.com/submit",
+            contentType: "application/json",
+            dataType: "json",
+            data: JSON.stringify({
+                access_key: WEB3FORMS_ACCESS_KEY,
+                subject: "New message from your portfolio — " + name,
+                from_name: "Portfolio contact form",
+                name: name,
+                email: email,
+                message: message,
+                botcheck: $("#botcheck").is(":checked")
+            }),
+            success: function (res) {
+                if (res && res.success) {
                     formSuccess();
                 } else {
                     formError();
-                    submitMSG(false,text);
+                    submitMSG(false, (res && res.message) || "Something went wrong. Please try again.");
                 }
+            },
+            error: function (xhr) {
+                var msg = "Could not send right now. Please email hasnainjustdigital@gmail.com directly.";
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    msg = xhr.responseJSON.message;
+                }
+                formError();
+                submitMSG(false, msg);
+            },
+            complete: function () {
+                $btn.prop("disabled", false).html(btnTxt);
             }
         });
     }
@@ -483,14 +525,23 @@ $(document).ready(function() {
     function formSuccess(){
         $("#contact-form")[0].reset();
         submitMSG(true, "Thanks! Your message has been sent.");
+        if (typeof Swal !== "undefined") {
+            Swal.mixin({
+                toast: true,
+                position: "top-end",
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true
+            }).fire({ icon: "success", title: "Message sent successfully" });
+        }
     }
-  
+
     function formError(){
-        $("#contactForm").removeClass().addClass('shake animated').one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){
-            $(this).removeClass();
+        $("#contact-form").removeClass().addClass('contact-form shake animated').one('webkitAnimationEnd mozAnimationEnd MSAnimationEnd oanimationend animationend', function(){
+            $(this).removeClass('shake animated');
         });
-    }  
-  
+    }
+
     function submitMSG(valid, msg){
 		var msgClasses;
         if(valid){

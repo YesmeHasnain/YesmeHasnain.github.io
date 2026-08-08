@@ -178,12 +178,17 @@
 								    <div class="help-block with-errors"></div>
 				                </div>
 						    </div>
+							<!-- Honeypot: hidden from people, bots tick it and the message is dropped -->
+							<label class="d-none" aria-hidden="true">
+								Do not fill this out if you are human
+								<input type="checkbox" id="botcheck" name="botcheck" tabindex="-1" autocomplete="off">
+							</label>
 							<div class="row">
 				                <div class="col-12 col-md-6 order-2 order-md-1 text-center text-md-start">
 					                <div id="validator-contact" class="hidden"></div>
 				                </div>
 				                <div class="col-12 col-md-6 order-1 order-md-2 text-end">
-					                <button type="submit" class="btn"><i class="font-icon icon-send" onclick="checkcrendital()"></i> Send Message</button>
+					                <button type="submit" class="btn"><i class="font-icon icon-send"></i> Send Message</button>
 				                </div>
 			                </div>
 		                </form>
@@ -200,34 +205,8 @@
 	<script src="assets/js/plugins.min.js"></script>
     <script src="assets/js/common.js"></script>
 
-    <!-- Mapbox init -->
-		<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-	<script>
-		var name = document.getElementById('nameContact');
-		var email = document.getElementById('emailContact');
-		var Massage = document.getElementById('emailContact');
-		function checkcrendital(){
-			const Toast = Swal.mixin({
-  				toast: true,
-  				position: "top-end",
-  				showConfirmButton: false,
-  				timer: 3000,
-  				timerProgressBar: true,
-  				didOpen: (toast) => {
-    			toast.onmouseenter = Swal.stopTimer;
-    			toast.onmouseleave = Swal.resumeTimer;
-  			}
-			});
-				Toast.fire({
-  				icon: "success",
-  				title: "Signed in successfully"
-				});
-			console.log("hasnain")
-		}
-		
-
-		
-	</script>
+	<!-- Success toast used by the contact form in common.js -->
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
 
 <!-- Mirrored from art-template.ru/vcard4/contact.html by HTTrack Website Copier/3.x [XR&CO'2014], Tue, 10 Jan 2023 09:31:05 GMT -->
