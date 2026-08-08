@@ -497,7 +497,13 @@ $(document).ready(function() {
         payload.append("name", name);
         payload.append("email", email);
         payload.append("message", message);
-        payload.append("botcheck", $("#botcheck").is(":checked"));
+        // Only send the honeypot when it is actually ticked. A browser omits
+        // unchecked boxes from a native form post, and appending it anyway
+        // sends the string "false", which Web3Forms reads as filled in and
+        // rejects every submission as a bot.
+        if ($("#botcheck").is(":checked")) {
+            payload.append("botcheck", "true");
+        }
 
         $.ajax({
             type: "POST",
