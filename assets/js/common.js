@@ -457,7 +457,7 @@ $(document).ready(function() {
       safe to commit this one to a public repository.
     -------------------------------------------------------------------*/
 
-    var WEB3FORMS_ACCESS_KEY = "PASTE-YOUR-ACCESS-KEY-HERE";
+    var WEB3FORMS_ACCESS_KEY = "13fc2eee-3df7-49cf-ab21-094660a1cf52";
 
     $("#contact-form").validator().on("submit", function (event) {
         if (event.isDefaultPrevented()) {
