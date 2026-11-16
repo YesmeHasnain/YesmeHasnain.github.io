@@ -3377,3 +3377,23 @@ button:focus {
   text-transform: uppercase;
   vertical-align: middle;
 }
+
+/* Live avatar (assets/js/avatar.js): eyes follow the cursor, the head turns, it blinks */
+.avatar-live {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 55%;
+  will-change: transform;
+}
+.avatar-live img {
+  display: block;
+}
+.avatar-live__eyes {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
