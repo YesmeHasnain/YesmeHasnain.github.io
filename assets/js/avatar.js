@@ -1,10 +1,12 @@
 /*
- * Live avatar: the eyes follow the cursor, the head turns toward it, and it blinks.
+ * Live avatar: the eyes follow the cursor, the head turns toward it, it blinks,
+ * and the mouth is closed in a smile until it laughs or talks.
  *
- * The memoji is drawn as two layers: my-avatar-base.png (the face with the irises
- * painted out) and an SVG on top with the two eyes, clipped to the real eye
- * openings so the irises can move without leaving the eye. If this script fails,
- * the sidebar keeps the original my-avatar.png, so nothing breaks.
+ * Layers: my-avatar-closed.png (closed mouth, irises painted out) as the page image;
+ * an SVG on top that shows my-avatar-base.png (open mouth) through a growing ellipse
+ * for the mouth, and the two eyes clipped to the real eye openings so the irises
+ * can move without leaving the eye. If this script fails, the sidebar keeps the
+ * original my-avatar.png, so nothing breaks.
  */
 (function () {
   "use strict";
@@ -63,23 +65,40 @@
       '</g>';
     e.h = h;
   });
-  svg.innerHTML = defs + "</defs>" + body;
+  // The page shows the closed-mouth face; the open mouth is the same face drawn on top
+  // through an ellipse that grows from the line between the lips.
+  var src = img.getAttribute("src");
+  var openSrc = src.replace("my-avatar.png", "my-avatar-base.png");
+  var closedSrc = src.replace("my-avatar.png", "my-avatar-closed.png");
+  var MOUTH = { cx: 276, cy: 371, rx: 66, ry: 40 };
+  defs += '<clipPath id="avMouth"><ellipse cx="' + MOUTH.cx + '" cy="' + MOUTH.cy + '" rx="0" ry="0"/></clipPath>';
+  svg.innerHTML =
+    defs + "</defs>" +
+    '<image href="' + openSrc + '" x="0" y="0" width="540" height="530" clip-path="url(#avMouth)"/>' +
+    body;
 
   var irises = svg.querySelectorAll(".av-iris");
   var lids = svg.querySelectorAll(".av-lid");
+  var mouthEl = svg.querySelector("#avMouth ellipse");
 
-  // swap in the irisless face only once the eyes are ready to cover it
-  var base = new Image();
-  base.onload = function () {
+  // swap in the layered face only once both pictures are loaded
+  var pending = 2;
+  function ready() {
+    if (--pending) return;
     img.parentNode.insertBefore(wrap, img);
     wrap.appendChild(img);
     wrap.appendChild(svg);
-    img.src = base.src;
+    img.src = closedSrc;
     box.classList.add("avatar-box--live");
     requestAnimationFrame(tick);
     scheduleBlink();
-  };
-  base.src = img.getAttribute("src").replace("my-avatar.png", "my-avatar-base.png");
+    scheduleMouth();
+  }
+  [openSrc, closedSrc].forEach(function (s) {
+    var pic = new Image();
+    pic.onload = ready;
+    pic.src = s;
+  });
 
   // ---------- motion ----------
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -105,9 +124,14 @@
     lastMove = performance.now();
   }
 
-  window.addEventListener("pointermove", function (ev) { lookAt(ev.clientX, ev.clientY); }, { passive: true });
+  window.addEventListener("pointermove", function (ev) {
+    lookAt(ev.clientX, ev.clientY);
+    // smile while a mouse is over the avatar (checked on every move, so leaving always counts)
+    var r = box.getBoundingClientRect();
+    hovering = ev.pointerType === "mouse" && ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+  }, { passive: true });
   window.addEventListener("pointerdown", function (ev) { lookAt(ev.clientX, ev.clientY); }, { passive: true });
-  document.addEventListener("mouseleave", function () { lastMove = 0; });
+  document.addEventListener("mouseleave", function () { lastMove = 0; hovering = false; });
 
   function wander(now) {
     // no pointer for a while (or a phone): glance around now and then
@@ -141,6 +165,15 @@
     var tx = (cur.ex * 9).toFixed(2);
     var ty = (cur.ey * 4.5).toFixed(2);
     for (var i = 0; i < irises.length; i++) irises[i].setAttribute("transform", "translate(" + tx + " " + ty + ")");
+
+    // mouth: 0 closed, 1 wide open
+    var goal = hovering ? 1 : mouth.target;
+    mouth.cur += (goal - mouth.cur) * 0.28;
+    if (mouth.cur < 0.004) mouth.cur = 0;
+    var o = mouth.cur;
+    var ease = o * o * (3 - 2 * o);
+    mouthEl.setAttribute("rx", o ? (MOUTH.rx * (0.55 + 0.45 * ease)).toFixed(2) : "0");
+    mouthEl.setAttribute("ry", (MOUTH.ry * ease).toFixed(2));
     requestAnimationFrame(tick);
   }
 
@@ -166,6 +199,42 @@
     }
     requestAnimationFrame(step);
   }
+
+  // ---------- mouth ----------
+  // Closed with a smile most of the time; now and then a big laugh or a few words,
+  // a smile while the cursor is on the avatar, and a short laugh on a click or tap.
+  var mouth = { cur: 0, target: 0 };
+  var hovering = false;
+  var timers = [];
+
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+
+  function laugh(ms) {
+    mouth.target = 1;
+    later(function () { mouth.target = 0; }, ms);
+  }
+
+  function talk(words) {
+    var t = 0;
+    for (var i = 0; i < words; i++) {
+      (function (open, gap) {
+        later(function () { mouth.target = 0.35 + Math.random() * 0.45; }, t);
+        later(function () { mouth.target = 0; }, t + open);
+        t += open + gap;
+      })(140 + Math.random() * 160, 90 + Math.random() * 160);
+    }
+    return t;
+  }
+
+  function scheduleMouth() {
+    later(function () {
+      var r = Math.random();
+      var busy = r < 0.45 ? (laugh(1200 + Math.random() * 1400), 2600) : talk(3 + Math.floor(Math.random() * 4));
+      later(scheduleMouth, busy);
+    }, 4500 + Math.random() * 5500);
+  }
+
+  box.addEventListener("click", function () { laugh(900); });
 
   function scheduleBlink() {
     setTimeout(function () {
